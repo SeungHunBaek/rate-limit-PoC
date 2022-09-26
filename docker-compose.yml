@@ -6,3 +6,6 @@ services:
       dockerfile: docker/Dockerfile
     ports:
       - 3000:3000
+      - 6379:6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

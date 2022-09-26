@@ -1,11 +1,13 @@
 FROM node:16-alpine
 
-# Install Packages
-# RUN apt-get update -y && apt-get upgrade -y
-# RUN apt-get install -y \
-#       sudo \
-#       nodejs
-
+RUN apt-get update \
+    && apt-get install -y git \
+    && echo "alias ll='ls -alF'" >> /etc/bash.bashrc \
+    && echo "alias rm='rm -i'" >> /etc/bash.bashrc \
+    && echo "alias cp='cp -i'" >> /etc/bash.bashrc \
+    && echo "alias mv='mv -i'" >> /etc/bash.bashrc \
+    && ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+    
 # 앱 디렉터리 생성
 WORKDIR /app
 
@@ -18,4 +20,6 @@ RUN npm install
 COPY . /app
 
 EXPOSE 3000
+EXPOSE 6379
+
 CMD [ "node", "src/app.js" ]
