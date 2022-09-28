@@ -1,5 +1,6 @@
-FROM node:16-alpine
+# FROM node:16-alpine
 
+FROM node:16.14.0-bullseye-slim
 RUN apt-get update \
     && apt-get install -y git \
     && echo "alias ll='ls -alF'" >> /etc/bash.bashrc \
@@ -20,6 +21,5 @@ RUN npm install
 COPY . /app
 
 EXPOSE 3000
-EXPOSE 6379
 
 CMD [ "node", "src/app.js" ]
