@@ -13,17 +13,17 @@ const redisClient = redis.createClient({
   enable_offline_queue: false 
 });
 redisClient.on("ready", ()=> {
-  console.log("Redis is Ready_a");
+  console.log("Redis is Ready");
 });
 
 redisClient.on("error", (err) => {
-  console.error(err);
+  console.error(`Redis Error: JSON.stringify(err, null, 2)`);
 });
 
 const accessLimiter = new RateLimiterRedis({
     storeClient: redisClient,
     keyPrefix: "access_",
-    points: 10, // 사용가능한 포인트 
+    points: 30, // 사용가능한 포인트 
     duration: 1, // 충전되는 시간
     // blockDuration: 
 });
@@ -40,6 +40,7 @@ const rateLimiterMiddleware = async (req, res, next) => {
         next();
     })
     .catch(async (rejRes) => {
+        // Redis가 에러를 return했을때
         if (rejRes instanceof Error) {
             // Some Redis error
             // Never happen if `insuranceLimiter` set up
@@ -52,12 +53,14 @@ const rateLimiterMiddleware = async (req, res, next) => {
             // // If there is no error, rateLimiterRedis promise rejected with number of ms before next request allowed
             // res.set('Retry-After', String(secs));
             // res.status(429).send(`Too Many Requests`);
-            
-            if(parseInt(rejRes.msBeforeNext) > 0) {
+            // 충전시간이 필요한경우
+            if(parseInt(rejRes.msBeforeNext) > -1) {
               // const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
-              console.log(`다시: ${rejRes.msBeforeNext}`);
+              console.log(`[retry] remain time: ${rejRes.msBeforeNext}ms, rejRes: ${rejRes}`);
               rateLimiterMiddleware(req, res, next);
+            // 기타 알 수 없는 에러
             } else {
+              console.log(`429: ${rejRes.msBeforeNext}`);
               res.status(429).send(`Too Many Requests`);
             }
         }
