@@ -7,8 +7,11 @@ const { RateLimiterRedis, RateLimiterMemory } = require('rate-limiter-flexible')
 // });
 // const redis = require('redis');
 const redis = require('ioredis');
-const redisClient = redis.createClient({ enable_offline_queue: false });
-
+const redisClient = redis.createClient({ 
+  // host: 'host.docker.internal',
+  port: 6379,
+  enable_offline_queue: false 
+});
 redisClient.on("ready", ()=> {
   console.log("Redis is Ready_a");
 });
@@ -20,19 +23,20 @@ redisClient.on("error", (err) => {
 const accessLimiter = new RateLimiterRedis({
     storeClient: redisClient,
     keyPrefix: "access_",
-    points: 5, // 10 requests
-    duration: 10, // per 1 second by IP
+    points: 10, // 사용가능한 포인트 
+    duration: 1, // 충전되는 시간
     // blockDuration: 
 });
 
 const sleep = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
 
 const rateLimiterMiddleware = async (req, res, next) => {
-    // console.log(`${req.ip}`);
-    accessLimiter.consume(`${req.ip}`, 1)
+    const IP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    accessLimiter.consume(`${IP}`, 1)
     .then((_res) => {
-        // console.log(`IP: ${req.ip}, response: ${_res}`);
-        console.log(`success`)
+        // console.log(`IP: ${IP}, response: ${_res}`);
+        console.log(`IP:${IP}, success`)
         next();
     })
     .catch(async (rejRes) => {
@@ -40,14 +44,22 @@ const rateLimiterMiddleware = async (req, res, next) => {
             // Some Redis error
             // Never happen if `insuranceLimiter` set up
             // Decide what to do with it in other case
-            console.log(`IP: ${req.ip}, redis-error: ${rejRes}`);
+            console.log(`IP: ${IP}, redis-error: ${rejRes}`);
         } else {
-            // console.log(`IP: ${req.ip}, error: ${rejRes}`);
-            // Can't consume
-            // If there is no error, rateLimiterRedis promise rejected with number of ms before next request allowed
-            const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
-            res.set('Retry-After', String(secs));
-            res.status(429).send(`Too Many Requests`);
+          // rateLimiterMiddleware(req, res, next);
+            // console.log(`IP:${IP}, error: ${rejRes}`);
+            // // Can't consume
+            // // If there is no error, rateLimiterRedis promise rejected with number of ms before next request allowed
+            // res.set('Retry-After', String(secs));
+            // res.status(429).send(`Too Many Requests`);
+            
+            if(parseInt(rejRes.msBeforeNext) > 0) {
+              // const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
+              console.log(`다시: ${rejRes.msBeforeNext}`);
+              rateLimiterMiddleware(req, res, next);
+            } else {
+              res.status(429).send(`Too Many Requests`);
+            }
         }
       });
 };

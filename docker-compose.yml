@@ -1,10 +1,8 @@
 version: "3"
 services:
-  poc:
+  poc_1:
     build:
       context: .
       dockerfile: docker/Dockerfile
     ports:
-      - 3001:3001
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 4000:4000
