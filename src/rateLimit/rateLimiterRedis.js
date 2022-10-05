@@ -23,27 +23,20 @@ redisClient.on("error", (err) => {
 const accessLimiter = new RateLimiterRedis({
     storeClient: redisClient,
     keyPrefix: 'ccxt-rate-limit-',
-    points: 2, // 사용가능한 포인트 
+    points: 5, // 사용가능한 포인트 
     duration: 1, // 충전되는 시간
+    // timeoutMs: 
     // blockDuration: 
 });
 
 const sleep = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
-__cnt = 0;
 const rateLimiterMiddleware = async (req, res, next) => {
     const IP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const startTime = new Date().getTime() / 1000;
-    let _startTime = performance.now()
-    console.log(__cnt++);
     accessLimiter.consume(`${IP}`, 1)
     .then((_res) => {
-        // console.log(`IP: ${IP}, response: ${_res}`);
-        console.log(`[success]IP: ${IP}`);
+        // console.log(`[success]IP: ${IP}`);
+        console.log(`[success]`);
         next();
-        const endTime = new Date().getTime() / 1000;
-        const _endTime = performance.now()
-        console.log(`[processing_time] ${endTime - startTime}ms`);
-        console.log(`[processing_time] ${_endTime - _startTime}ms`);
     })
     .catch(async (rejRes) => {
         // Redis가 에러를 return했을때
@@ -63,12 +56,19 @@ const rateLimiterMiddleware = async (req, res, next) => {
             // 충전시간이 필요한경우
             if(parseInt(rejRes.msBeforeNext) > -1) {
               // const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
-              console.log(`[retry] remain time: ${rejRes.msBeforeNext}ms, rejRes: ${rejRes}`);
-              rateLimiterMiddleware(req, res, next);
-            // 기타 알 수 없는 에러
+              // 기다리다가 타임아웃된 event
+              if(req.timedout) {
+                console.log(`[Timeout] remain time: ${rejRes.msBeforeNext}ms`);
+                // res.status(504).send(`Gateway Timeout`); // express-timeout이미 보냄
+              } else {
+                console.log(`[retry] remain time: ${rejRes.msBeforeNext}ms, rejRes: ${rejRes}`);
+                await sleep(rejRes.msBeforeNext);
+                rateLimiterMiddleware(req, res, next);
+              }
+            // timeout된 request
             } else {
-              console.log(`429: ${rejRes.msBeforeNext}`);
-              res.status(429).send(`Too Many Requests`);
+              console.log(`[ETC]: ${rejRes}`);
+              // res.status(429).send(`Too Many Requests`);
             }
         }
       });

@@ -1,6 +1,7 @@
 const redis = require("redis");
 const client = redis.createClient({ 
     enable_offline_queue: false,
+    host: 'host.docker.internal',
     port: 6379
   });
 const {promisify} = require('util');
