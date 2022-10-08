@@ -60,8 +60,8 @@ npx install-peerdeps --dev eslint-config-airbnb
 {
   "extends": ["airbnb", "plugin:prettier/recommended"]
 }
-extends : 이미 구성되어 있는 설정 집합을 불러오는 부분으로, 뒤에 있을수록 우선 적용
-airbnb : ESLint에 Airbnb Style Guide를 적용
+"extends" : 이미 구성되어 있는 설정 집합을 불러오는 부분으로, 뒤에 있을수록 우선 적용
+"airbnb" : ESLint에 Airbnb Style Guide를 적용
 ```
 
 ### Prettier 설정 파일(.prettierrc) 작성하기
