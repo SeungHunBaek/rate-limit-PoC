@@ -1,8 +1,8 @@
 version: "3"
 services:
-  poc:
+  poc_1:
     build:
       context: .
       dockerfile: docker/Dockerfile
     ports:
-      - 3000:3000
+      - 4000:4000
