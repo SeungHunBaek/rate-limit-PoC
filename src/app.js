@@ -1,39 +1,40 @@
-const express = require('express'); 
+require('dotenv').config(); // ec2 path위치 확인 할것
+global.logger = require('./loggerService/logger');
+const express = require('express');
 const bodyParser = require('body-parser');
-const app = express();
 const timeout = require('connect-timeout');
-const port = 4000;
-
+// const morgan = require('morgan');
 const rateLimiterRedisMiddleware = require('./rateLimit/rateLimiterRedis');
+const { morganMiddleware, assignId } = require('./loggerService/morganMiddleware');
+const logger = require('./loggerService/logger');
+
+const app = express();
+app.set('port', process.env.PORT || 4000);
+// Todo
+// 돌핀 배포시 환경에따라 다르게 설정
+app.use(assignId);
+app.use(morganMiddleware);
+app.use(timeout('10s'));
+app.use(bodyParser.json({ extended: true }));
+app.use(rateLimiterRedisMiddleware);
 
 let cnt = 0;
-// const haltOnTimedout = (req, res, next) => {
-//   if (!req.timedout) {
-//     console.log(`[app.js] req.timedout: ${req.timedout}`);
-//     next();
-//   } else {
-//     console.log(`[app.js] req.timedout: ${req.timedout}`);
-//     res.status(504).send(`[app.js] Gateway Timeout`); 
-//   }
-// }
-app.use(timeout('10s'));
-app.use(bodyParser.json({ extended: true }))
-// app.use(haltOnTimedout);
-app.use(rateLimiterRedisMiddleware);
-app.get('/', async function (req, res) {
+app.get('/', async (req, res) => {
   try {
-      console.log(`[app.js] End`);
-      res.status(200).set("Content-Type", "text/html").send({a:++cnt})
+    logger.info(`[app.js] Start`);
+    res
+      .status(200)
+      .set('Content-Type', 'text/html')
+      .send({ a: (cnt += 1) });
   } catch (err) {
-    console.log("err", err);
+    logger.info(`[/:Error], ${JSON.stringify(err, null, 2)}`);
   }
-}); 
+});
 
-process.on('uncaughtException', (err) =>{
-  console.error(`[uncaughtException]: ${err}`);
-})
+process.on('uncaughtException', (err) => {
+  logger.error(`[uncaughtException]: ${err}`);
+});
 
-app.listen(port, ()=>{
-  // process.send(`ready`);
-  console.log(`express ready`)
-})
+app.listen(app.get('port'), () => {
+  logger.info(`[express] ready port: ${process.env.PORT}`);
+});

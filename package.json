@@ -1,10 +1,10 @@
 {
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "test rate-limit for Bobby",
   "main": "app.js",
   "scripts": {
     "start": "node src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx artillery run -o myReport artillery/test.json && npx artillery report myReport"
   },
   "license": "MIT",
   "dependencies": {
@@ -12,12 +12,25 @@
     "connect-timeout": "^1.9.0",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
+    "dotenv": "^16.0.3",
     "express": "~4.16.1",
     "express-rate-limit": "^6.6.0",
     "http-errors": "~1.6.3",
     "ioredis": "^5.2.3",
     "morgan": "~1.9.1",
+    "node-uuid": "^1.4.8",
     "rate-limiter-flexible": "^2.3.10",
-    "redis": "^4.3.1"
+    "winston": "^3.8.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.25.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsx-a11y": "^6.6.1",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-react": "^7.31.8",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^2.7.1"
   }
 }
