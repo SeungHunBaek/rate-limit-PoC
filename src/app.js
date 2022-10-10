@@ -1,4 +1,4 @@
-require('dotenv').config(); // path위치 확인 할것
+require('dotenv').config(); // ec2 path위치 확인 할것
 global.logger = require('./loggerService/logger');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -36,5 +36,5 @@ process.on('uncaughtException', (err) => {
 });
 
 app.listen(app.get('port'), () => {
-  logger.info(`[express] ready`);
+  logger.info(`[express] ready port: ${process.env.PORT}`);
 });
