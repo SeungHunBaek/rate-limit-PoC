@@ -3,7 +3,8 @@
   "description": "test rate-limit for Bobby",
   "main": "app.js",
   "scripts": {
-    "start": "node src/app.js"
+    "start": "node src/app.js",
+    "test": "npx artillery run -o myReport artillery/test.json && npx artillery report myReport"
   },
   "license": "MIT",
   "dependencies": {
