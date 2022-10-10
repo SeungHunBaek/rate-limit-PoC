@@ -1,5 +1,6 @@
 const redis = require('ioredis');
 const { RateLimiterRedis } = require('rate-limiter-flexible');
+const logger = require('../loggerService/logger');
 
 const redisClient = redis.createClient({
   // host: 'host.docker.internal',
@@ -8,31 +9,31 @@ const redisClient = redis.createClient({
 });
 
 redisClient.on('ready', () => {
-  console.log('[Redis] Ready');
+  logger.info('[Redis] Ready');
 });
 
 redisClient.on('error', (err) => {
-  console.error(`[Redis] Error: ${JSON.stringify(err, null, 2)}`);
+  logger.error(`[Redis] Error: ${JSON.stringify(err, null, 2)}`);
 });
 
 const accessLimiter = new RateLimiterRedis({
   storeClient: redisClient,
   keyPrefix: 'ccxt-rate-limit-',
-  points: 5, // 사용가능한 포인트
+  points: 30, // 사용가능한 포인트
   duration: 1 // 충전되는 시간
   // timeoutMs:
   // blockDuration:
 });
 
 // eslint-disable-next-line no-promise-executor-return
-const sleep = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
+// const sleep = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 const rateLimiterMiddleware = async (req, res, next) => {
   const IP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   accessLimiter
     .consume(`${IP}`, 1)
     .then((_res) => {
       // console.log(`[success]IP: ${IP}`);
-      console.log(`[success] ${_res}`);
+      logger.info(`[success] ${_res}`);
       next();
     })
     .catch(async (rejRes) => {
@@ -42,7 +43,7 @@ const rateLimiterMiddleware = async (req, res, next) => {
         // Some Redis error
         // Never happen if `insuranceLimiter` set up
         // Decide what to do with it in other case
-        console.log(`[Error]: IP: ${IP}, redis-error: ${rejRes}`);
+        logger.error(`[Error]: IP: ${IP}, redis-error: ${rejRes}`);
       } else {
         // rateLimiterMiddleware(req, res, next);
         // console.error(`IP:${IP}, error: ${rejRes}`);
@@ -53,20 +54,23 @@ const rateLimiterMiddleware = async (req, res, next) => {
         // 충전시간이 필요한경우
         // eslint-disable-next-line no-lonely-if
         if (parseInt(rejRes.msBeforeNext, 10) > -1) {
+          logger.warn(`remain time: ${rejRes.msBeforeNext}ms, rejRes: ${rejRes}`);
+          res.status(429).send(`Too Many Request`);
           // const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
           // 기다리다가 타임아웃된 event
-          if (req.timedout) {
-            console.log(`[Timeout] remain time: ${rejRes.msBeforeNext}ms`);
-            // res.status(504).send(`Gateway Timeout`); // express-timeout이미 보냄
-          } else {
-            console.log(`[retry] remain time: ${rejRes.msBeforeNext}ms, rejRes: ${rejRes}`);
-            await sleep(rejRes.msBeforeNext);
-            rateLimiterMiddleware(req, res, next);
-          }
-          // timeout된 request
+          // if (req.timedout) {
+          //   logger.warn(`[Timeout] remain time: ${rejRes.msBeforeNext}ms`);
+          //   // res.status(504).send(`Gateway Timeout`); // express-timeout이미 보냄
+          // } else {
+          //   logger.warn(`[retry] remain time: ${rejRes.msBeforeNext}ms, rejRes: ${rejRes}`);
+          //   res.status(429).send(`Too Many Request`);
+          //   // await sleep(rejRes.msBeforeNext);
+          //   // rateLimiterMiddleware(req, res, next);
+          // }
+          // 기타에러
         } else {
-          console.log(`[ETC]: ${rejRes}`);
-          // res.status(429).send(`Too Many Requests`);
+          logger.error(`Unknown Error`);
+          res.status(503).send(`Unknown Error`);
         }
       }
     });
